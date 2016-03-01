@@ -13,20 +13,19 @@ class BusinessesViewController: UIViewController, UITableViewDataSource, UITable
     @IBOutlet weak var searchBar: UISearchBar!
     var businesses: [Business]!
     
+    
+    
+    
     @IBOutlet weak var tableView: UITableView!
     
+    var isMoreDataLoading = false
     
-    let data = ["New York, NY", "Los Angeles, CA", "Chicago, IL", "Houston, TX",
-        "Philadelphia, PA", "Phoenix, AZ", "San Diego, CA", "San Antonio, TX",
-        "Dallas, TX", "Detroit, MI", "San Jose, CA", "Indianapolis, IN",
-        "Jacksonville, FL", "San Francisco, CA", "Columbus, OH", "Austin, TX",
-        "Memphis, TN", "Baltimore, MD", "Charlotte, ND", "Fort Worth, TX"]
+    var data: [Business]! = []
     
-    var filteredData: [String]!
-   
+    var filteredData : [Business]! = []
     
     override func viewDidLoad() {
-        weak var searchBar: UITableView!
+        
         super.viewDidLoad()
         
         tableView.delegate = self
@@ -34,28 +33,32 @@ class BusinessesViewController: UIViewController, UITableViewDataSource, UITable
         tableView.rowHeight = UITableViewAutomaticDimension
         tableView.estimatedRowHeight = 120
         searchBar.delegate = self
-        filteredData = data
+        
         
 
-        Business.searchWithTerm("Thai", completion: { (businesses: [Business]!, error: NSError!) -> Void in
+       /*Business.searchWithTerm("Thai", completion: { (businesses: [Business]!, error: NSError!) -> Void in
             self.businesses = businesses
             self.tableView.reloadData()
             for business in businesses {
                 print(business.name!)
                 print(business.address!)
             }
-        })
+        }) */
 
-/* Example of Yelp search with more search options specified
+//Example of Yelp search with more search options specified
         Business.searchWithTerm("Restaurants", sort: .Distance, categories: ["asianfusion", "burgers"], deals: true) { (businesses: [Business]!, error: NSError!) -> Void in
             self.businesses = businesses
             
             for business in businesses {
+                self.data.append(business)
                 print(business.name!)
                 print(business.address!)
             }
+            self.filteredData = self.data
+            self.tableView.reloadData()
+            
         }
-*/
+
     }
 
     override func didReceiveMemoryWarning() {
@@ -66,8 +69,8 @@ class BusinessesViewController: UIViewController, UITableViewDataSource, UITable
     
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
-        if businesses != nil {
-            return businesses!.count
+        if filteredData != nil {
+            return filteredData.count
         } else {
             return 0
         }
@@ -78,12 +81,67 @@ class BusinessesViewController: UIViewController, UITableViewDataSource, UITable
         
         let cell = tableView.dequeueReusableCellWithIdentifier("BusinessCell", forIndexPath: indexPath) as! BusinessCell
         
-        cell.business = businesses[indexPath.row] 
+        cell.business = filteredData[indexPath.row]
         
         return cell
-        
+    }
+    func searchBar(searchBar: UISearchBar, textDidChange searchText: String) {
+        // When there is no text, filteredData is the same as the original data
+        if searchText.isEmpty {
+            filteredData = data
+        } else {
+            // The user has entered text into the search box
+            // Use the filter method to iterate over all items in the data array
+            // For each item, return true if the item should be included and false if the
+            // item should NOT be included
+            filteredData = data.filter({(dataItem: Business) -> Bool in
+                // If dataItem matches the searchText, return true to include it
+                if dataItem.name!.rangeOfString(searchText, options: .CaseInsensitiveSearch) != nil {
+                    return true
+                } else {
+                    return false
+                }
+            })
+        }
+        tableView.reloadData()
     }
     
+    func searchBarTextDidBeginEditing(searchBar: UISearchBar) {
+        self.searchBar.showsCancelButton = true
+    }
+    
+    func searchBarCancelButtonClicked(searchBar: UISearchBar) {
+        searchBar.showsCancelButton = false
+        searchBar.text = ""
+        searchBar.resignFirstResponder()
+    }
+    // Infinite Scrolling
+    
+    func loadMoreData() {
+        
+        // ... Create the NSURLRequest (myRequest) ...
+        Business.searchWithTerm("Restaurants", sort: .Distance, categories: ["asianfusion", "burgers"], deals: true) { (businesses: [Business]!, error: NSError!) -> Void in
+            
+            self.filteredData.appendContentsOf(businesses)
+            
+            for business in businesses {
+                self.data.append(business)
+                print(business.name!)
+                print(business.address!)
+            }
+            self.filteredData = self.data
+            
+            
+            
+            // Update flag
+            self.isMoreDataLoading = false
+            self.tableView.reloadData()
+        }
+    }
+    
+        
+       
+        
     
 
     /*
@@ -95,5 +153,6 @@ class BusinessesViewController: UIViewController, UITableViewDataSource, UITable
         // Pass the selected object to the new view controller.
     }
     */
+
 
 }
